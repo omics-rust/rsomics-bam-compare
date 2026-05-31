@@ -1,6 +1,6 @@
 [package]
 name = "rsomics-bam-compare"
-version = "0.1.1"
+version = "0.1.2"
 description = "Per-bin comparison of two BAMs as a bedGraph/bigWig track — Rust port of deeptools bamCompare (log2/ratio/subtract/... of binned coverage with readCount scaling)"
 edition = "2024"
 rust-version = "1.91"

@@ -9,6 +9,10 @@ use rsomics_coverage_core::ChromBins;
 use crate::CompareOpts;
 use crate::operation::combine;
 
+/// bamCompare tiles each chromosome into 5-Mbp `writeBedGraph_worker` tasks; a
+/// bedGraph run never merges across a tile boundary.
+const CHUNK: u64 = 5_000_000;
+
 /// Write one chromosome's combined bins as merged bedGraph lines.
 ///
 /// Adjacent equal-value bins are collapsed (deeptools `writeBedGraph`
@@ -30,6 +34,10 @@ pub(crate) fn write_chrom_bedgraph(
     for i in 0..n {
         let bin_start = i as u64 * bin_size;
         let bin_end = ((i as u64 + 1) * bin_size).min(c1.chrom_len);
+        // bamCompare runs writeBedGraph in 5-Mbp tiles (single-process default):
+        // a run never merges across a tile boundary. Unlike bamCoverage it keeps
+        // tile-trailing 0 runs (a 0 here is a real log2 ratio, not absent data).
+        let at_chunk_edge = bin_start.is_multiple_of(CHUNK);
 
         let value = combine(c1.bins[i], c2.bins[i], scale, opts);
 
@@ -39,7 +47,7 @@ pub(crate) fn write_chrom_bedgraph(
                 write_end = bin_end;
                 prev_val = Some(value);
             }
-            Some(pv) if values_equal(pv, value) => {
+            Some(pv) if values_equal(pv, value) && !at_chunk_edge => {
                 write_end = bin_end;
             }
             Some(pv) => {
